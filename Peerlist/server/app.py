@@ -2,20 +2,22 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import google.generativeai as genai
 from sqlalchemy import create_engine, text
-
+from dotenv import load_dotenv
 import os
+from flask_cors import CORS
+
 
 # Configuring flask app
 app = Flask(__name__)
-app.config['DATABASE_URI'] = os.getenv('DATABASE_URI')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+CORS(app)
 
 # Configuring gemini
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key="AIzaSyAELpX01QapPzARzZlLwuszYu86oy0vhXc")
 
 # Configuring database
-SQL_URL = os.getenv('DATABASE_URI')
+SQL_URL = "mysql://root:sdWHwKxCezUUlDmcMrEFlAYKcsUmraaz@roundhouse.proxy.rlwy.net:34303/railway"
+print("Database URI: ", SQL_URL)
 engine = create_engine(SQL_URL)
 connection = engine.connect()
 
@@ -36,6 +38,7 @@ def read_sql_query(query):
 
     # Fetch all rows from the result
     rows = result.fetchall()
+    print("TYPE: ", type(rows))
 
     return rows
 
@@ -73,8 +76,13 @@ No matter what the user asks for always retrun the project_name, description, li
 NOTE: also the sql code should not have ``` in beginning or end and sql word in output. 
 """
 
+@app.route('/')
+def home():
+    return "Hello World"
+
 @app.route('/query', methods=['POST'])
 def query():
+    print("Endpoint was hit")
     # 1. Get the Question from the user
     data = request.json
     question = data.get('input')
@@ -84,11 +92,16 @@ def query():
 
     # 3. Get the response 
     response = read_sql_query(text(query))
-
-    if response:
-        return jsonify(response)
+    print("Respone Type: ", type(response))
+    answer = [tuple(row) for row in response]
+    print(type(answer[0][0]))
+    if answer:
+        print(answer)
+        return jsonify({'projects': answer})
     else:
         return jsonify("Error fetching the project"), 404
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
